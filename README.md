@@ -109,3 +109,7 @@ The tests cover every helper script and check that the report template, renderer
 ## Author
 
 Aladdin Alhoseany (<alhoseany@gmail.com>)
+
+## License
+
+[MIT](LICENSE)
