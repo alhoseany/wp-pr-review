@@ -180,7 +180,7 @@ def test_main_too_large_diff_suggests_local_diff(capsys):
 
 
 @pytest.mark.parametrize("path", [
-    "tests/stripe/CompletionRequest.php", "src/test/a.php", "tests/js/x.test.js",
+    "tests/payments/CompletionRequest.php", "src/test/a.php", "tests/js/x.test.js",
     "src/FooTest.php", "js/__tests__/a.js"])
 def test_test_files_skipped_unless_included(path):
     diff = _diff(path, ["echo $name;"]) if path.endswith(".php") else \

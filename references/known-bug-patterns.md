@@ -52,7 +52,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Check per-object type, status and ownership, not a role-wide capability
 
-**What shipped:** **(security)** Handlers load a caller-supplied id with `get_post()`, `get_comment()`, an attachment lookup or raw SQL and act on whatever it names, treating a role-wide capability (`edit_posts`, `edit_products`) or nothing as permission. Lower-privileged or anonymous callers then receive other authors' draft, private, pending, trashed or password-protected content through search, AJAX, public API single-item branches, keyless update or changelog endpoints that resolve by id, title or slug across every status, and listing queries without `post_status = 'publish'` and `post_password = ''`. Write variants delete any attachment a submitter references, approve or delete any comment regardless of `comment_type`, or show another customer's order from an id in the URL. Read paths often remove the query filter that hides such objects without adding a status check, and response filters add hidden data after the gate has refused. `is_post_publicly_viewable()` alone is not enough: it ignores `post_password` and depends on the post type's `publicly_queryable` flag.
+**What shipped:** **(security)** Handlers load a caller-supplied id with `get_post()`, `get_comment()`, an attachment lookup or raw SQL and act on whatever it names, treating a role-wide capability (`edit_posts`, a custom `edit_<type>s` capability) or nothing as permission. Lower-privileged or anonymous callers then receive other authors' draft, private, pending, trashed or password-protected content through search, AJAX, public API single-item branches, keyless update or changelog endpoints that resolve by id, title or slug across every status, and listing queries without `post_status = 'publish'` and `post_password = ''`. Write variants delete any attachment a submitter references, approve or delete any comment regardless of `comment_type`, or show another customer's order from an id in the URL. Read paths often remove the query filter that hides such objects without adding a status check, and response filters add hidden data after the gate has refused. `is_post_publicly_viewable()` alone is not enough: it ignores `post_password` and depends on the post type's `publicly_queryable` flag.
 
 **Detect by:** Grep `get_post(`, `get_comment(`, `get_page_by_path(`, `wp_delete_post(`, `wp_delete_comment(`, `wp_delete_attachment(`, `wp_update_comment(` and `get_attached_file(` with ids from requests, shortcode or block attributes, or form fields. After loading, require that the type is the one the handler owns, that reads check `current_user_can( 'read_post', $id )` or publish status plus `! post_password_required( $post )` (or `comment_approved`), and that writes and private reads check the owner matches the current user or a per-object capability or signed token; a missing owner must deny. In public endpoints force `'post_status' => 'publish'` and return the same not-found response for hidden and nonexistent ids. Flag `'post_status' => 'any'|'all'`, `remove_filter()` around a lookup with no status check after it, enrichment filters that run after a refusal, and REST routes that check only the route capability.
 
@@ -100,9 +100,9 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Make access gates fail closed when a status, tier or key is missing
 
-**What shipped:** **(security)** A guard denies only when a looked-up status is present and wrong, as in `if ( $status && 'active' !== $status )`, so once the resource is deleted the lookup returns empty and the action proceeds. An entitlement check that filters by a variant or tier id drops that filter when the id is null and then matches any tier, over-granting access; sibling methods return every variant's files when none is named, or fall back to the cheapest tier when a stored id is missing. Other variants: a restriction check wraps a scalar meta value into an array of the wrong shape so `empty( $row['key'] )` is always true and legacy protected content is treated as unrestricted, and a plan-feature lookup with a `?? FREE` default treats any unknown or misspelled feature key as available on every plan.
+**What shipped:** **(security)** A guard denies only when a looked-up status is present and wrong, as in `if ( $status && 'active' !== $status )`, so once the resource is deleted the lookup returns empty and the action proceeds. An entitlement check that filters by a price-option or tier id drops that filter when the id is null and then matches any tier, over-granting access; sibling methods return every option's files when none is named, or fall back to the cheapest tier when a stored id is missing. Other variants: a restriction check wraps a scalar meta value into an array of the wrong shape so `empty( $row['key'] )` is always true and legacy protected content is treated as unrestricted, and a plan-feature lookup with a `?? FREE` default treats any unknown or misspelled feature key as available on every plan.
 
-**Detect by:** Grep access and plan checks for `if ( $value && <expected> !== $value )`, `?? <permissive default>`, `unset( $args['<variant>_id'] )`, `if ( empty( $tier_id ) )` branches that skip a `WHERE` clause, and defaults that pick the first or cheapest option. Confirm that empty, false, null and unknown keys deny by default, and that 'no tier specified' matches only untiered records or denies, never everything. Check normalization of legacy meta formats produces the shape the checks read, and that free or always-allowed features are listed explicitly.
+**Detect by:** Grep access and plan checks for `if ( $value && <expected> !== $value )`, `?? <permissive default>`, `unset( $args['<option>_id'] )`, `if ( empty( $tier_id ) )` branches that skip a `WHERE` clause, and defaults that pick the first or cheapest option. Confirm that empty, false, null and unknown keys deny by default, and that 'no tier specified' matches only untiered records or denies, never everything. Check normalization of legacy meta formats produces the shape the checks read, and that free or always-allowed features are listed explicitly.
 
 ---
 
@@ -212,9 +212,9 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Do not link existing records to an account by an unverified email
 
-**What shipped:** **(security)** Registration or checkout auto-registration attaches an existing guest customer record and its orders to the new account based only on the email typed into the form, so anyone who knows a guest buyer's email takes over their history. Variants: a `nopriv` handler with no nonce looks up a customer by a request email to grant a returning-customer discount (and the differing totals reveal whether the email exists), and a post-payment handler calls `wp_set_auth_cookie()` for the user linked to the order's email, which a guest can set to a victim's address.
+**What shipped:** **(security)** Registration, or account creation during guest checkout, attaches an existing guest customer record and its orders to the new account based only on the email typed into the form, so anyone who knows a guest buyer's email takes over their history. Variants: a `nopriv` handler with no nonce looks up a customer by a request email to grant a returning-customer discount (and the differing totals reveal whether the email exists), and a post-payment handler calls `wp_set_auth_cookie()` for the user linked to the order's email, which a guest can set to a victim's address.
 
-**Detect by:** Grep registration, auto-register and order-linking code for lookups by email that transfer ownership, grant discounts, or call `wp_set_auth_cookie()`; require email verification before linking, record the authenticated user from `get_current_user_id()` at order creation, and never derive identity from an email the request supplied.
+**Detect by:** Grep registration, account-creation and order-linking code for lookups by email that transfer ownership, grant discounts, or call `wp_set_auth_cookie()`; require email verification before linking, record the authenticated user from `get_current_user_id()` at order creation, and never derive identity from an email the request supplied.
 
 ---
 
@@ -246,7 +246,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 **What shipped:** A post-checkout hook verifies a nonce from the submitted order data, but only some gateways send that nonce, and the check is redundant when the hook only fires after the host has already validated the request. When checkout logs in or creates the user during the request, nonces created earlier are bound to user 0 and fail on the follow-up request (for example a payment-confirmation AJAX call). Front-end code that sends `X-WP-Nonce` to a REST route that authenticates with its own token hits the same problem: a stale nonce (minted as a guest before login, or for another site on multisite) makes core's `rest_cookie_check_errors` return 403 before `permission_callback` runs.
 
-**Detect by:** When a diff adds `wp_verify_nonce()` in a hook that fires late in a multi-step flow, confirm every path that reaches the hook actually supplies the nonce. If the flow can call `wp_set_current_user()`, `wp_signon()` or auto-registration between nonce creation and verification, require the nonce to be regenerated and handed back to the client after login. For `fetch`/`apiFetch` calls with `X-WP-Nonce`, check whether the session can change after render and whether the route authenticates otherwise; if so, drop the nonce or refresh it after login.
+**Detect by:** When a diff adds `wp_verify_nonce()` in a hook that fires late in a multi-step flow, confirm every path that reaches the hook actually supplies the nonce. If the flow can call `wp_set_current_user()`, `wp_signon()` or automatic account creation between nonce creation and verification, require the nonce to be regenerated and handed back to the client after login. For `fetch`/`apiFetch` calls with `X-WP-Nonce`, check whether the session can change after render and whether the route authenticates otherwise; if so, drop the nonce or refresh it after login.
 
 ---
 
@@ -518,7 +518,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Do not print sanitized plain text through wp_kses_post
 
-**What shipped:** **(security)** Text that passed through `sanitize_text_field()` (so markup survives only as entities) is later printed through `wp_kses_post()` or `wp_kses_post( wpautop( ... ) )`. That rebuilds live tags and allows the `style` attribute, so buyer notes, REST-stored event data or author-supplied text gains markup and CSS on admin screens, invoices or receipts.
+**What shipped:** **(security)** Text that passed through `sanitize_text_field()` (so markup survives only as entities) is later printed through `wp_kses_post()` or `wp_kses_post( wpautop( ... ) )`. That rebuilds live tags and allows the `style` attribute, so buyer notes, REST-stored event data or author-supplied text gains markup and CSS on admin screens, emails or receipts.
 
 **Detect by:** Grep `wp_kses_post(` in renderers for user-, buyer- or REST-supplied text. Plain-text fields must be printed with `esc_html()`. Fields that really need markup must use `wp_kses()` with a strict allowlist that excludes `style`.
 
@@ -712,9 +712,9 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Store secrets and rarely read options with autoload off
 
-**What shipped:** **(security)** License keys, tokens and status payloads are saved with `update_option()` without the `$autoload` argument, so they are autoloaded on every request and exposed to anything that dumps `wp_load_alloptions()`. Each bundled copy of a library adds more.
+**What shipped:** **(security)** API keys, tokens and status payloads are saved with `update_option()` without the `$autoload` argument, so they are autoloaded on every request and exposed to anything that dumps `wp_load_alloptions()`. Each bundled copy of a library adds more.
 
-**Detect by:** Grep `update_option(`/`add_option(` whose name contains `key`, `token`, `secret`, `license` or `credentials`, or that stores a large rarely read blob, and require `false` as the autoload argument. Note `update_option()` only applies `$autoload` when the option is created or its value changes, so existing installs need a migration.
+**Detect by:** Grep `update_option(`/`add_option(` whose name contains `key`, `token`, `secret`, `password` or `credentials`, or that stores a large rarely read blob, and require `false` as the autoload argument. Note `update_option()` only applies `$autoload` when the option is created or its value changes, so existing installs need a migration.
 
 ---
 
@@ -1108,9 +1108,9 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Resolve table names through the prefix-aware accessor
 
-**What shipped:** Code reads a protected `table_name` property directly from another query object instead of calling its `get_table_name()` method. PHP lets sibling subclasses of a common parent read protected properties directly, so `__get()` never runs and the unprefixed name (`orders` instead of `wp_myplugin_orders`) ends up in SQL, failing on any install. Bare table names hard-coded in JOINs fail the same way on non-default prefixes.
+**What shipped:** Code reads a protected table-name property directly from another query object instead of calling its accessor method. PHP lets sibling subclasses of a common parent read protected properties directly, so `__get()` never runs and the unprefixed name (`items` instead of `wp_myplugin_items`) ends up in SQL, failing on any install. Bare table names hard-coded in JOINs fail the same way on non-default prefixes.
 
-**Detect by:** Grep for `->table_name` or `->table_alias` read on any object other than `$this` (`\$[a-z_]+->table_name`) and replace with the accessor method. Flag SQL strings with a literal table name not built from `$wpdb->prefix` or the class accessor, especially in cross-table JOINs. Test on an install with a non-default table prefix.
+**Detect by:** Grep for a table-name or table-alias property read on any object other than `$this` and replace with the accessor method. Flag SQL strings with a literal table name not built from `$wpdb->prefix` or the class accessor, especially in cross-table JOINs. Test on an install with a non-default table prefix.
 
 ---
 
@@ -1198,7 +1198,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Do not force-recompute a site-wide aggregate on a per-transaction hot path
 
-**What shipped:** Order completion calls an aggregate getter with a force flag, skipping its long-lived transient and running a full-table `SUM()` synchronously in the buyer's request (about a second on a large store, a full table scan). Refund and delete paths do the same.
+**What shipped:** Order completion calls an aggregate getter with a force flag, skipping its long-lived transient and running a full-table `SUM()` synchronously in the buyer's request. Refund and delete paths do the same.
 
 **Detect by:** In callbacks on order complete, refund, delete or save, or any checkout path, grep for aggregate getters called with a force/refresh argument (`, true )`, `'force' => true`) and `SUM(`/`COUNT(*)` over a whole table. Require invalidating the cache and deferring the recompute to cron or Action Scheduler.
 
@@ -1368,7 +1368,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Do not assume hook arguments are normalized when the hook fires early
 
-**What shipped:** A callback on an early 'before add' hook uses `$options['variant_id']` as an array key (`array_key_exists( $options['variant_id'], $prices )`). At that point the host has not normalized the value yet, and for multi-option items it is an array, so PHP 8 throws `TypeError: Illegal offset type`.
+**What shipped:** A callback on an early 'before add' hook uses `$options['option_id']` as an array key (`array_key_exists( $options['option_id'], $prices )`). At that point the host has not normalized the value yet, and for multi-option items it is an array, so PHP 8 throws `TypeError: Illegal offset type`.
 
 **Detect by:** For callbacks on 'pre_'/'before_' hooks, check where the host normalizes each argument and whether that happens before or after the hook fires. Before using a hook argument as an array key, confirm it is checked with `is_scalar()` or `is_int()`.
 
@@ -1706,7 +1706,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Clear pending-action meta on every early return and exception
 
-**What shipped:** A lifecycle method writes 'pending action' meta (for example `cancel_by`) and then returns early when the gateway is missing or the API call returns false, or it throws, without removing the meta. A later cron run finds the stale meta and repeats the action, for example cancelling a subscription an admin has since reactivated.
+**What shipped:** A lifecycle method writes 'pending action' meta (for example a scheduled-cancel marker) and then returns early when the gateway is missing or the API call returns false, or it throws, without removing the meta. A later cron run finds the stale meta and repeats the action, for example cancelling a subscription an admin has since reactivated.
 
 **Detect by:** In methods that set scheduling or pending-state meta, check every `return` and `throw` after the write. Cleanup must happen in a `finally` block or equivalent. Also confirm that the cron consumer re-checks the record's current state before acting on old meta.
 
@@ -1756,7 +1756,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 **What shipped:** A webhook listener runs its processing method only when a requirements check passes, and that check fails when a related local record is not found by a strict lookup. The fallback that would repair the missing link lives inside the processing method, so it never runs and the event is acknowledged and dropped.
 
-**Detect by:** For each fallback or backfill, check where it is called relative to guard methods (`requirements_met()`, `can_process()`); flag a repair step placed after a guard that reads the very field being repaired, especially in webhook handlers that already returned 200.
+**Detect by:** For each fallback or backfill, check where it is called relative to guard methods (`is_valid_request()`, `can_process()`); flag a repair step placed after a guard that reads the very field being repaired, especially in webhook handlers that already returned 200.
 
 ---
 
@@ -2038,9 +2038,9 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Check every status list in lifecycle queries for the missing status
 
-**What shipped:** Status allow- and deny-lists in lifecycle queries leave out a status the job must handle. An expiration-reminder query excludes `pending` and `trash` but not `active`, so auto-renewing subscribers get both renewal and expiration notices. A renewal flow looks up the old subscription with `status__in => [ 'active', 'trialling', 'failing' ]`, leaves out `expired`, finds nothing, and skips cancelling the old gateway subscription, which can then bill again.
+**What shipped:** Status allow- and deny-lists in lifecycle queries leave out a status the job must handle. An expiration-reminder query excludes `pending` and `trash` but not `active`, so auto-renewing subscribers get both renewal and expiration notices. A renewal flow looks up the old subscription with a status allow-list of active, trialing and past due, leaves out `expired`, finds nothing, and skips cancelling the old gateway subscription, which can then bill again.
 
-**Detect by:** List every `status__in`/`status__not_in` (or `WHERE status IN`) array in reminder, renewal, upgrade and cancellation code, and walk each status in the model through it. Ask whether a record in that state should be included, and whether a `can_cancel()`-style guard that rejects a status needs a context-specific override. A status left out of a lookup makes the action silently do nothing.
+**Detect by:** List every status allow- or deny-list (a `WHERE status IN` clause or a query-arg array) in reminder, renewal, upgrade and cancellation code, and walk each status in the model through it. Ask whether a record in that state should be included, and whether a `can_<action>()`-style guard that rejects a status needs a context-specific override. A status left out of a lookup makes the action silently do nothing.
 
 ---
 
@@ -2094,7 +2094,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Read subscription state flags from the order that writes them
 
-**What shipped:** A guard reads a decision flag (for example "upgraded away") from the subscription's original order, but the writer stores it on the most recent order, which is a renewal for any subscription that has renewed. The guard never sees it, and a subscription that should be blocked is reactivated and billed.
+**What shipped:** A guard reads a decision flag (for example "replaced by another plan") from the subscription's original order, but the writer stores it on the most recent order, which is a renewal for any subscription that has renewed. The guard never sees it, and a subscription that should be blocked is reactivated and billed.
 
 **Detect by:** For each state meta a guard reads, find where it is written and confirm the guard checks the same set of records (the parent order and every renewal), not only the original one.
 
@@ -2132,11 +2132,11 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ---
 
-### Read the billing period from the product when no variant is chosen
+### Read the billing period from the product when no price option is chosen
 
-**What shipped:** An upgrade or renewal path looks up the billing period by variant ID and falls back to one year when no variant ID is present, so a monthly single-price product gets a yearly expiration.
+**What shipped:** An upgrade or renewal path looks up the billing period by price-option ID and falls back to one year when no option ID is present, so a monthly single-price product gets a yearly expiration.
 
-**Detect by:** In upgrade, renewal and expiration code, find lookups keyed by a variant or price ID and confirm the fallback reads the product's own period settings instead of a hard-coded default.
+**Detect by:** In upgrade, renewal and expiration code, find lookups keyed by a price-option ID and confirm the fallback reads the product's own period settings instead of a hard-coded default.
 
 ---
 
@@ -2264,7 +2264,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 ### Filter in SQL, not PHP, when batch exports paginate
 
-**What shipped:** A batch exporter's `get_total()` and `get_data()` query every row and filter (for example by country) in PHP. The step count is inflated, and each page keeps only part of the rows it fetched, so data is dropped on large stores. The same exporter hardcodes a status list instead of the canonical 'complete statuses' helper, and ignores partial refunds in its totals.
+**What shipped:** A batch exporter's `get_total()` and `get_data()` query every row and filter (for example by country) in PHP. The step count is inflated, and each page keeps only part of the rows it fetched, so data is dropped on large stores. The same exporter hardcodes a status list instead of the plugin's shared, filterable status helper, and ignores partial refunds in its totals.
 
 **Detect by:** In paginated exporters, confirm that `get_total()` and `get_data()` use the same `WHERE` clause and that no rows are discarded in PHP after `LIMIT`/`OFFSET`. Grep for hardcoded status arrays where a filterable helper exists. Check that financial totals subtract refunds.
 
@@ -2388,7 +2388,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 **What shipped:** **(security)** API clients pass `'sslverify' => false` to `wp_remote_get()`/`wp_remote_post()` as a workaround for hosts with outdated CA bundles. That disables certificate validation, so a network-position attacker can intercept the request and the credentials or tokens it carries.
 
-**Detect by:** Grep `'sslverify'\s*=>\s*false`, `CURLOPT_SSL_VERIFYPEER => false` and `https_ssl_verify` filters returning false, especially on requests carrying credentials, tokens or license keys. WordPress ships its own CA bundle, so require the flag to be removed.
+**Detect by:** Grep `'sslverify'\s*=>\s*false`, `CURLOPT_SSL_VERIFYPEER => false` and `https_ssl_verify` filters returning false, especially on requests carrying credentials or tokens. WordPress ships its own CA bundle, so require the flag to be removed.
 
 ---
 
@@ -2428,7 +2428,7 @@ what went wrong and how to detect it. Entries marked **(security)** describe a v
 
 **What shipped:** A cached-remote-data helper re-requests whenever the stored value is empty rather than when it has expired. An endpoint that legitimately returns nothing, or a site with no credential, then fires a doomed request on every call, adding latency to a hot path.
 
-**Detect by:** In cached remote fetches, confirm the refresh condition checks a stored expiry timestamp or transient, not `empty( $data )`. Confirm the request is skipped entirely when a required credential (API key, license) is missing.
+**Detect by:** In cached remote fetches, confirm the refresh condition checks a stored expiry timestamp or transient, not `empty( $data )`. Confirm the request is skipped entirely when a required credential (API key or token) is missing.
 
 ---
 
