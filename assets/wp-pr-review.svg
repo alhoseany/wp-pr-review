@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#d97757" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#d97757" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#d97757"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#grid)"/>
+  <circle cx="1200" cy="450" r="430" fill="url(#glow)"/>
+
+  <!-- Left: copy -->
+  <g font-family="Avenir Next">
+    <text x="100" y="175" font-size="24" font-weight="700" fill="#d97757" letter-spacing="5">CLAUDE CODE SKILL</text>
+    <text x="96" y="275" font-size="96" font-weight="700" fill="#f8fafc">WP PR Review</text>
+    <text x="100" y="345" font-size="34" fill="#cbd5e1">Reviews WordPress plugin and theme PRs</text>
+    <text x="100" y="392" font-size="34" fill="#cbd5e1">and writes a verified, local review.md.</text>
+
+    <g font-size="30" fill="#e2e8f0">
+      <circle cx="122" cy="480" r="22" fill="#d97757" fill-opacity="0.18"/>
+      <path d="M111 480l8 8l15-16" fill="none" stroke="#d97757" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="164" y="491">Checks 415 known WordPress bug patterns</text>
+
+      <circle cx="122" cy="550" r="22" fill="#d97757" fill-opacity="0.18"/>
+      <path d="M111 550l8 8l15-16" fill="none" stroke="#d97757" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="164" y="561">Verifies every finding a second time</text>
+
+      <circle cx="122" cy="620" r="22" fill="#d97757" fill-opacity="0.18"/>
+      <path d="M111 620l8 8l15-16" fill="none" stroke="#d97757" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="164" y="631">Never posts to GitHub; you stay in control</text>
+    </g>
+  </g>
+
+  <!-- Command pill -->
+  <g>
+    <rect x="100" y="700" width="560" height="76" rx="38" fill="#020617" stroke="#334155" stroke-width="2"/>
+    <text x="140" y="749" font-family="Menlo" font-size="28" fill="#d97757">&gt;</text>
+    <text x="172" y="749" font-family="Menlo" font-size="28" fill="#f8fafc">/wp-pr-review &lt;PR url&gt;</text>
+  </g>
+
+  <!-- Right: pull request card -->
+  <g filter="url(#shadow)">
+    <rect x="880" y="120" width="440" height="320" rx="22" fill="#f8fafc"/>
+  </g>
+  <g>
+    <!-- branch icon -->
+    <g fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round">
+      <circle cx="922" cy="160" r="8"/>
+      <circle cx="922" cy="200" r="8"/>
+      <circle cx="958" cy="168" r="8"/>
+      <path d="M922 168v24M958 176c0 14-20 14-30 20"/>
+    </g>
+    <text x="984" y="176" font-family="Avenir Next" font-size="26" font-weight="700" fill="#0f172a">Pull request</text>
+    <rect x="1196" y="150" width="96" height="34" rx="17" fill="#dcfce7"/>
+    <text x="1244" y="174" font-family="Avenir Next" font-size="19" font-weight="700" fill="#15803d" text-anchor="middle">Open</text>
+    <line x1="904" y1="222" x2="1296" y2="222" stroke="#e2e8f0" stroke-width="2"/>
+
+    <!-- diff lines -->
+    <g>
+      <rect x="904" y="242" width="392" height="26" rx="5" fill="#f1f5f9"/>
+      <rect x="918" y="251" width="210" height="8" rx="4" fill="#94a3b8"/>
+      <rect x="904" y="276" width="392" height="26" rx="5" fill="#fee2e2"/>
+      <text x="914" y="296" font-family="Menlo" font-size="20" font-weight="700" fill="#dc2626">-</text>
+      <rect x="940" y="285" width="250" height="8" rx="4" fill="#f87171"/>
+      <rect x="904" y="310" width="392" height="26" rx="5" fill="#dcfce7"/>
+      <text x="912" y="330" font-family="Menlo" font-size="20" font-weight="700" fill="#16a34a">+</text>
+      <rect x="940" y="319" width="290" height="8" rx="4" fill="#4ade80"/>
+      <rect x="904" y="344" width="392" height="26" rx="5" fill="#dcfce7"/>
+      <text x="912" y="364" font-family="Menlo" font-size="20" font-weight="700" fill="#16a34a">+</text>
+      <rect x="940" y="353" width="190" height="8" rx="4" fill="#4ade80"/>
+      <rect x="904" y="378" width="392" height="26" rx="5" fill="#f1f5f9"/>
+      <rect x="918" y="387" width="160" height="8" rx="4" fill="#94a3b8"/>
+    </g>
+  </g>
+
+  <!-- magnifier -->
+  <g>
+    <circle cx="1290" cy="370" r="62" fill="#ffffff" fill-opacity="0.12" stroke="#d97757" stroke-width="12"/>
+    <path d="M1335 415l52 52" stroke="#d97757" stroke-width="18" stroke-linecap="round"/>
+  </g>
+
+  <!-- flow arrow -->
+  <path d="M920 470C920 560 940 610 1004 628" fill="none" stroke="#d97757" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+  <!-- review.md card -->
+  <g filter="url(#shadow)">
+    <rect x="1020" y="500" width="470" height="320" rx="22" fill="#ffffff"/>
+  </g>
+  <g font-family="Avenir Next">
+    <!-- doc icon -->
+    <path d="M1052 530h26l14 14v34h-40z" fill="#fde7dd" stroke="#d97757" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M1078 530v14h14" fill="none" stroke="#d97757" stroke-width="3" stroke-linejoin="round"/>
+    <text x="1108" y="566" font-family="Menlo" font-size="26" font-weight="700" fill="#0f172a">review.md</text>
+    <rect x="1300" y="538" width="164" height="40" rx="20" fill="#16a34a"/>
+    <path d="M1320 558l7 7l13-14" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1350" y="566" font-size="20" font-weight="700" fill="#ffffff">Approve</text>
+    <line x1="1044" y1="602" x2="1466" y2="602" stroke="#e2e8f0" stroke-width="2"/>
+
+    <g font-size="22" fill="#334155">
+      <path d="M1050 636l7 7l13-14" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="1086" y="644">Team standards checked</text>
+      <path d="M1050 680l7 7l13-14" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="1086" y="688">Security and payment paths traced</text>
+      <path d="M1050 724l7 7l13-14" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="1086" y="732">No duplicate comments</text>
+      <path d="M1050 768l7 7l13-14" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="1086" y="776">Every line number checked</text>
+    </g>
+  </g>
+</svg>

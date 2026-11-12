@@ -1,5 +1,7 @@
 # wp-pr-review
 
+![WP PR Review: a Claude Code skill that reviews WordPress plugin and theme PRs and writes a verified, local review.md](assets/wp-pr-review.png)
+
 A [Claude Code](https://claude.com/claude-code) skill that reviews GitHub pull requests for WordPress plugins and themes and writes the result to a local `review.md`.
 
 Claude does the reviewing itself. Small Python helpers do the mechanical parts: fetching PR data, setting up the checkout, scanning the diff, checking for duplicate comments, and rendering the report. Nothing is posted to GitHub.
